@@ -57,16 +57,19 @@ class Predictor(BasePredictor):
             torch_dtype=torch.float16,
             cache_dir=MODEL_CACHE
         ).to("cuda")
+        # enable memory savings
+        self.pipe.enable_vae_slicing()
+        self.pipe.enable_model_cpu_offload()
 
     @torch.inference_mode()
     def predict(
         self,
         video: Path = Input(description="Input video"),
         prompt: str = Input(description="Prompt for the model", default="panda playing a guitar, on a boat, in the ocean, high quality"),
-        negative_prompt: str = Input(description="Negative prompt for the model", default="bad quality, worse quality"),
+        negative_prompt: str = Input(description="Negative prompt for the model", default="(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime:1.4), text, close up, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck"),
         guidance_scale: float = Input(description="Guidance scale for the model", default=7.5),
         num_inference_steps: int = Input(description="Number of inference steps", default=25),
-        strength: float = Input(description="Strength of the initial image", default=0.5),
+        strength: float = Input(description="Strength of the initial image", default=0.6),
         seed: int = Input(description="Random seed, leave blank to randomize the seed", default=None),
     ) -> Path:
         """Run a single prediction on the model"""
@@ -84,10 +87,6 @@ class Predictor(BasePredictor):
             steps_offset=1,
         )
         self.pipe.scheduler = scheduler
-
-        # enable memory savings
-        self.pipe.enable_vae_slicing()
-        self.pipe.enable_model_cpu_offload()
 
         video = load_video(str(video))
         output = self.pipe(
